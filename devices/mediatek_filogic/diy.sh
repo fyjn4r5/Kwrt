@@ -522,3 +522,7 @@ echo "# CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_bananapi_bpi-r3 is not set"
 echo "# CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_bananapi_bpi-r3-mini is not set" >> .config
 echo "# CONFIG_TARGET_ROOTFS_INITRAMFS is not set" >> .config
 
+# 强制关闭 ALL_PROFILES，只编译选中的设备（双重保险）
+sed -i '/CONFIG_TARGET_ALL_PROFILES/d' .config
+echo "# CONFIG_TARGET_ALL_PROFILES is not set" >> .config
+
