@@ -1,0 +1,99 @@
+--- a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
++++ b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+@@ -83,12 +83,7 @@
+ 	local board=$(board_name)
+ 	case "$board" in
+ 	xiaomi,mi-router-ax3000t|\
+-	xiaomi,mi-router-wr30u-stock)
+-		fw_setenv mtdparts "nmbm0:1024k(bl2),256k(Nvram),256k(Bdata),2048k(factory),2048k(fip),256k(crash),256k(crash_log),34816k(ubi),34816k(ubi1),32768k(overlay),12288k(data),256k(KF)"
+-		;;
+-	xiaomi,redmi-router-ax6000-stock)
+-		fw_setenv mtdparts "nmbm0:1024k(bl2),256k(Nvram),256k(Bdata),2048k(factory),2048k(fip),256k(crash),256k(crash_log),30720k(ubi),30720k(ubi1),51200k(overlay)"
+-		;;
++
+ 	esac
+ }
+ 
+@@ -107,7 +102,6 @@
+ 	bananapi,bpi-r4-lite|\
+ 	bazis,ax3000wm|\
+ 	cmcc,a10-ubootmod|\
+-	cmcc,rax3000m|\
+ 	comfast,cf-wr632ax-ubootmod|\
+ 	creatlentem,clt-r30b1-ubi|\
+ 	cudy,m3000-v1-ubootmod|\
+@@ -171,6 +165,9 @@
+ 	smartrg,sdg-8632|\
+ 	smartrg,sdg-8733|\
+ 	smartrg,sdg-8733a|\
++	cmcc,rax3000m-emmc|\
++	cmcc,xr30-emmc|\
++	sl,3000-emmc
+ 	smartrg,sdg-8734)
+ 		CI_KERNPART="kernel"
+ 		CI_ROOTPART="rootfs"
+@@ -286,13 +283,6 @@
+ 			;;
+ 		esac
+ 		;;
+-	xiaomi,mi-router-ax3000t|\
+-	xiaomi,mi-router-wr30u-stock|\
+-	xiaomi,redmi-router-ax6000-stock)
+-		CI_KERN_UBIPART=ubi_kernel
+-		CI_ROOT_UBIPART=ubi
+-		nand_do_upgrade "$1"
+-		;;
+ 	*)
+ 		nand_do_upgrade "$1"
+ 		;;
+@@ -318,7 +308,6 @@
+ 	bananapi,bpi-r4-lite|\
+ 	bazis,ax3000wm|\
+ 	cmcc,a10-ubootmod|\
+-	cmcc,rax3000m|\
+ 	comfast,cf-wr632ax-ubootmod|\
+ 	creatlentem,clt-r30b1-ubi|\
+ 	cudy,m3000-v1-ubootmod|\
+@@ -388,6 +377,9 @@
+ 	bananapi,bpi-r4-poe|\
+ 	bananapi,bpi-r4-lite|\
+ 	cmcc,rax3000m|\
++	cmcc,rax3000m-emmc|\
++	cmcc,xr30-emmc|\
++	sl,3000-emmc
+ 	gatonetworks,gdsp|\
+ 	mediatek,mt7988a-rfb)
+ 		if [ "$CI_METHOD" = "emmc" ]; then
+@@ -422,6 +414,19 @@
+ 	esac
+ }
+ 
++
++tenbay_dualboot_fixup()
++{
++	[ "$(rootfs_type)" = "tmpfs" ] || return 0
++
++	if ! fw_printenv -n boot_from &>/dev/null; then
++		echo "unable to read uboot-env"
++		return 1
++	fi
++
++	fw_setenv boot_from ubi
++}
++
+ platform_pre_upgrade() {
+ 	local board=$(board_name)
+ 
+@@ -441,10 +446,8 @@
+ 	jiorouter,ax6000-jidu6101)
+ 		jiorouter_initial_setup
+ 		;;
+-	xiaomi,mi-router-ax3000t|\
+-	xiaomi,mi-router-wr30u-stock|\
+-	xiaomi,redmi-router-ax6000-stock)
+-		xiaomi_initial_setup
++	cmcc,mr3000d-ciq-256m)
++		tenbay_dualboot_fixup
+ 		;;
+ 	esac
+ }
