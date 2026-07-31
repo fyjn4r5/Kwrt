@@ -526,3 +526,57 @@ echo "# CONFIG_TARGET_ROOTFS_INITRAMFS is not set" >> .config
 sed -i '/CONFIG_TARGET_ALL_PROFILES/d' .config
 echo "# CONFIG_TARGET_ALL_PROFILES is not set" >> .config
 
+# ============================================================
+# LuCI 服务器: nginx 禁用, uhttpd 启用
+# ============================================================
+
+# 1) 解除 kiddin9 包对 nginx / luci-nginx 的依赖
+sed -i 's/+luci-nginx//g; s/+nginx[^ ]*//g' package/feeds/kiddin9/*/Makefile
+
+# 2) .config 强制关闭 nginx、开启 uhttpd（兜底，最后出现的选项生效）
+sed -i '/CONFIG_PACKAGE_luci-nginx/d; /CONFIG_PACKAGE_nginx/d; /CONFIG_PACKAGE_luci-ssl/d; /CONFIG_PACKAGE_uhttpd/d' .config
+cat >> .config << 'UHTTPD_EOF'
+CONFIG_PACKAGE_luci-nginx=n
+CONFIG_PACKAGE_nginx=n
+CONFIG_PACKAGE_nginx-ssl=n
+CONFIG_PACKAGE_nginx-mod-luci=n
+CONFIG_PACKAGE_luci-ssl=y
+CONFIG_PACKAGE_luci-ssl-openssl=y
+CONFIG_PACKAGE_uhttpd=y
+CONFIG_PACKAGE_uhttpd-mod-ubus=y
+UHTTPD_EOF
+
+# 3) 开机兜底: uhttpd 启用, nginx 禁用
+mkdir -p files/etc/uci-defaults
+cat > files/etc/uci-defaults/99-kwrt-webserver << 'WS_EOF'
+#!/bin/sh
+if [ -x /etc/init.d/nginx ]; then
+    /etc/init.d/nginx disable 2>/dev/null
+    /etc/init.d/nginx stop 2>/dev/null
+fi
+[ -x /etc/init.d/uhttpd ] && /etc/init.d/uhttpd enable 2>/dev/null
+exit 0
+WS_EOF
+chmod +x files/etc/uci-defaults/99-kwrt-webserver
+
+# ============================================================
+# 默认 LAN IP: 192.168.1.1, root 密码为空
+# ============================================================
+
+# 还原 common/diy.sh 中 192.168.1 -> 10.0.0 的改动
+sed -i 's/10.0.0.1/192.168.1.1/g' package/base-files/files/bin/config_generate
+
+# 覆盖 my-default-settings(99-default-settings) 设的 root 密码与 10.0.0.1 后台地址
+cat > files/etc/uci-defaults/99-kwrt-defaults << 'DF_EOF'
+#!/bin/sh
+uci -q set network.lan.ipaddr='192.168.1.1'
+uci -q commit network
+pkill -f "busybox passwd" 2>/dev/null
+passwd -d root 2>/dev/null
+sed -i 's/^root:[^:]*:/root::/' /etc/shadow 2>/dev/null
+sleep 1
+sed -i 's/^root:[^:]*:/root::/' /etc/shadow 2>/dev/null
+exit 0
+DF_EOF
+chmod +x files/etc/uci-defaults/99-kwrt-defaults
+
